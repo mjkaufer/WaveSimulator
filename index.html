@@ -114,6 +114,7 @@
 
 				equations.push(radialSin(10, 0, mag, freq))
 				equations.push(radialSin(-10, 0, mag, freq))
+				equations.push(radialSin(0, 10 * Math.sqrt(3), mag, freq))
 
 				posCol = (new THREE.Color()).setHSL(Math.random(), 0.5, 0);
 				negCol = posCol.offsetHSL(0.5, 0, 0)
