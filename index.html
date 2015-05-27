@@ -48,8 +48,9 @@
 			var t = 0
 
 			var freq = 1;
+			var mainGroup
 
-			var eq, negCol, posCol
+			var eq, negCol, posCol, pointMaterial, wireMaterial
 			var equations = []
 
 			init();
@@ -93,28 +94,47 @@
 				// var material = new THREE.MeshFaceMaterial( {color: (new THREE.Color()).setHSL(Math.random(), 0.5, 0.5), side: THREE.DoubleSide} );
 				// var material = new THREE.MeshDepthMaterial();
 				// var material = new THREE.MeshPhongMaterial( {color: (new THREE.Color()).setHSL(Math.random(), 0.5, 0.5), side: THREE.DoubleSide} );
+				var point = false;
 
 
-				// material = new THREE.PointCloudMaterial({
-				// 	// color: (new THREE.Color()).setHSL(Math.random(), 0.5, 0.5),
-				//     vertexColors: THREE.VertexColors
+				pointMaterial = new THREE.PointCloudMaterial({
+					// color: (new THREE.Color()).setHSL(Math.random(), 0.5, 0.5),
+				    vertexColors: THREE.VertexColors
+				})
 
-				// })
-				// mesh = new THREE.PointCloud(geometry, material)
+				wireMaterial = new THREE.MeshDepthMaterial({
+					vertexColors: THREE.VertexColors,
+					wireframe: true
+				});
+
+
+				if(point){
+					mesh = new THREE.PointCloud(geometry, pointMaterial)
+				} else {
+					mesh = new THREE.Mesh(geometry, wireMaterial)
+				}
+
+				
+
+				mainGroup = new THREE.Object3D()
+
+				mainGroup.add(mesh)
 
 				// material = new THREE.MeshBasicMaterial({ vertexColors: THREE.VertexColors });
-				material = new THREE.MeshDepthMaterial({ vertexColors: THREE.FaceColors, wireframe: true });
-				mesh = new THREE.Mesh(geometry, material)
+				// material = new THREE.MeshDepthMaterial({ vertexColors: THREE.FaceColors, wireframe: true });
+				// mesh = new THREE.Mesh(geometry, material)
 
 
 				// mesh = new THREE.Mesh( geometry, material );
-				scene.add( mesh );
+				scene.add( mainGroup );
 
 				var mag = 0.5
 
+				colorArray = []
+
 				equations.push(radialSin(10, 0, mag, freq))
 				equations.push(radialSin(-10, 0, mag, freq))
-				equations.push(radialSin(0, 10 * Math.sqrt(3), mag, freq))
+				equations.push(radialSin(0, 10 * Math.sqrt(3), -1 * mag, freq / 2))
 
 				posCol = (new THREE.Color()).setHSL(Math.random(), 0.5, 0);
 				negCol = posCol.offsetHSL(0.5, 0, 0)
@@ -132,9 +152,11 @@
 
 					col = new THREE.Color(0xffffff)
 
-					mesh.geometry.colors.push(col)
+					colorArray.push(col)
 					mesh.geometry.verticesNeedUpdate = true
 				}
+
+					mesh.geometry.colors = colorArray
 
 				//
 
@@ -213,6 +235,8 @@
 					mesh.geometry.colorsNeedUpdate = true;
 
 				}
+
+				mainGroup.rotateZ(0.005)
 
 				// mesh.rotation.x = time * 0.25;
 				// mesh.rotation.y = time * 0.5;
