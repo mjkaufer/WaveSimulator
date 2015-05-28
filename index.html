@@ -35,7 +35,7 @@
 
 		<script src="js/three.min.js"></script>
 		<script src="js/OrbitControls.js"></script>
-
+		<script src="js/dat.min.js"></script>
 		<script type="x-shader/x-vertex" id="vertexshader">
 
 			attribute float displacement;
@@ -123,7 +123,7 @@
 
 			var t = 0
 
-			var freq = 1.5;
+			var freq = 0.2;
 			var mainGroup
 
 			var eq, negCol, posCol, pointMaterial, wireMaterial
@@ -171,8 +171,32 @@
 				// return Math.pow(z, 1/3)
 			}
 
+			function getFreq(){
+				return freq;
+			}
+
+			var Controls = function() {
+				this.frequency = 1.5;
+				this.wireframe = function() {
+					shaderMaterial.wireframe = !shaderMaterial.wireframe;
+				};
+			};
+
+			window.onload = function() {
+				var text = new Controls();
+				var gui = new dat.GUI();
+				var freqControl = gui.add(text, 'frequency', 0, 5);
+				freqControl.onChange(function(value){
+					freq = value;
+				})
+				gui.add(text, 'wireframe');
+			};
+
 
 			function init() {
+
+
+
 
 				container = document.getElementById( 'container' );
 
@@ -227,7 +251,8 @@
 					uniforms: uniforms,
 					attributes: attributes,
 					vertexShader: document.getElementById('vertexshader').textContent,
-					fragmentShader: document.getElementById('fragmentshader').textContent
+					fragmentShader: document.getElementById('fragmentshader').textContent,
+					wireframe: true
 				});
 
 				if(shader){
@@ -260,10 +285,10 @@
 
 				colorArray = []
 
-				equations.push(radialSin(5, 0, mag, freq))
-				equations.push(radialSin(-5, 0, mag, freq))
+				equations.push(radialSin(5, 0, mag, getFreq))
+				equations.push(radialSin(-5, 0, mag, getFreq))
 				// equations.push(radialSin(0, 10 * Math.sqrt(3), -1 * mag, freq / 2))
-				equations.push(radialSin(0, 5 * Math.sqrt(3), mag, freq))
+				equations.push(radialSin(0, 5 * Math.sqrt(3), mag, getFreq))
 
 				posCol = (new THREE.Color()).setHSL(Math.random(), 0.5, 0);
 				negCol = posCol.offsetHSL(0.5, 0, 0)
@@ -307,12 +332,12 @@
 
 			}
 
-			function radialSin(x0, y0, mag, freq){
+			function radialSin(x0, y0, mag, freqFunction){
 
 				return function(x, y, t){
 					var dist = Math.sqrt(Math.pow(x0 - x, 2) + Math.pow(y0 - y, 2))
 					// return Math.sin(2 * Math.PI * freq * (t + dist)) / Math.max(Math.pow(dist, 1/3), 0.075)
-					return mag * Math.sin(2 * Math.PI * freq * (t + dist)) / Math.max(Math.log(dist * 2 + 1), 0.2)
+					return mag * Math.sin(2 * Math.PI * freqFunction() * (t + dist)) / Math.max(Math.log(dist * 2 + 1), 0.2)
 				}
 			}
 
