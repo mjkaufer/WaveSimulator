@@ -36,9 +36,85 @@
 		<script src="js/three.min.js"></script>
 		<script src="js/OrbitControls.js"></script>
 
+		<script type="x-shader/x-vertex" id="vertexshader">
 
+			attribute float displacement;
+			attribute float noise;
+			uniform float span;
+			varying vec3 vNormal;
+			varying float color_according_to_z;
+			varying float rand;
+
+			float z_actual;
+
+
+			void main() {
+				vNormal = normal;
+
+				vec3 newPosition = position + normal * vec3(0.0, 0.0, displacement);
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+
+				z_actual = gl_Position.z;
+				color_according_to_z = displacement / span; //1.0 / span * z_actual;	 // CHANGED
+				rand = noise;
+			}
+		</script>
+		<script type="x-shader/x-fragment" id="fragmentshader">
+			varying float color_according_to_z;
+			varying float rand;
+			void main() {
+				// gl_FragColor = hsv_to_rgb(color_according_to_z, 0.5, 0.5, 1.0);
+				// float h = color_according_to_z;
+				// float s = 0.5;
+				// float h = color_according_to_z;
+				// float h = mod(color_according_to_z * 3.0, 1.0);
+				float h = abs(color_according_to_z);
+				float s = min(0.8, abs(color_according_to_z * rand) / 5.0 + 0.6);
+				// float v = 0.5;
+				float v = min(0.8, abs(color_according_to_z * rand) / 5.0 + 0.6);
+				float a = 1.0;
+
+				//hsl code from https://gist.github.com/eieio/4109795
+				float c = v * s;
+				h = mod((h * 6.0), 6.0);
+				float x = c * (1.0 - abs(mod(h, 2.0) - 1.0));
+				vec4 color;
+			 
+				if (0.0 <= h && h < 1.0) {
+					color = vec4(c, x, 0.0, a);
+				} else if (1.0 <= h && h < 2.0) {
+					color = vec4(x, c, 0.0, a);
+				} else if (2.0 <= h && h < 3.0) {
+					color = vec4(0.0, c, x, a);
+				} else if (3.0 <= h && h < 4.0) {
+					color = vec4(0.0, x, c, a);
+				} else if (4.0 <= h && h < 5.0) {
+					color = vec4(x, 0.0, c, a);
+				} else if (5.0 <= h && h < 6.0) {
+					color = vec4(c, 0.0, x, a);
+				} else {
+					color = vec4(0.0, 0.0, 0.0, a);
+				}
+			 
+				color.rgb += v - c;
+
+				// gl_FragColor = vec4(color_according_to_z, 1.0 - color_according_to_z, 1.0 - rand, 1.0);
+				gl_FragColor = color;
+			}
+
+		</script>
 
 		<script>
+
+			Array.prototype.max = function () {
+				return Math.max.apply(null, this)
+			}
+
+			Array.prototype.min = function () {
+				return Math.min.apply(null, this)
+			}
+
+
 			var container;
 
 			var camera, scene, renderer, controls;
@@ -53,9 +129,47 @@
 			var eq, negCol, posCol, pointMaterial, wireMaterial
 			var equations = []
 
+
+
+
+			var attributes = {
+				displacement: {
+					type: 'f',
+					value: []
+				},
+				noise: {
+					type: 'f',
+					value: []
+				}
+			}
+			var uniforms = {
+				lowest: {
+					type: 'f',
+					value: 0.0
+				},
+				highest: {
+					type: 'f',
+					value: 0.0
+				},
+				span: {
+					type: 'f',
+					value: 0.0
+				}
+			}
+
+
+
+
 			init();
 			animate();
 
+			function getValue(z){
+				// return Math.log(1 + z / 2)
+				return z
+				// return Math.pow(z, 1/3)
+									
+				// return Math.pow(z, 1/3)
+			}
 
 
 			function init() {
@@ -99,7 +213,7 @@
 
 				pointMaterial = new THREE.PointCloudMaterial({
 					// color: (new THREE.Color()).setHSL(Math.random(), 0.5, 0.5),
-				    vertexColors: THREE.VertexColors
+					vertexColors: THREE.VertexColors
 				})
 
 				wireMaterial = new THREE.MeshDepthMaterial({
@@ -107,14 +221,28 @@
 					wireframe: true
 				});
 
+				shader = true;
 
-				if(point){
-					mesh = new THREE.PointCloud(geometry, pointMaterial)
+				shaderMaterial = new THREE.ShaderMaterial({
+					uniforms: uniforms,
+					attributes: attributes,
+					vertexShader: document.getElementById('vertexshader').textContent,
+					fragmentShader: document.getElementById('fragmentshader').textContent
+				});
+
+				if(shader){
+					mesh = new THREE.Mesh(geometry, shaderMaterial)
 				} else {
-					mesh = new THREE.Mesh(geometry, wireMaterial)
+					if(point){
+						mesh = new THREE.PointCloud(geometry, pointMaterial)
+					} else {
+						mesh = new THREE.Mesh(geometry, wireMaterial)
+					}
+
 				}
 
-				
+				mesh.geometry.dynamic = true;
+
 
 				mainGroup = new THREE.Object3D()
 
@@ -132,9 +260,9 @@
 
 				colorArray = []
 
-				equations.push(radialSin(10, 0, mag, freq))
-				equations.push(radialSin(-10, 0, mag, freq))
-				equations.push(radialSin(0, 10 * Math.sqrt(3), -1 * mag, freq / 2))
+				equations.push(radialSin(5, 0, mag, freq))
+				equations.push(radialSin(-5, 0, mag, freq))
+				// equations.push(radialSin(0, 10 * Math.sqrt(3), -1 * mag, freq / 2))
 
 				posCol = (new THREE.Color()).setHSL(Math.random(), 0.5, 0);
 				negCol = posCol.offsetHSL(0.5, 0, 0)
@@ -143,6 +271,10 @@
 					var z = 0;
 					for(var j = 0; j < equations.length; j++)
 						z+=equations[j](mesh.geometry.vertices[i].x, mesh.geometry.vertices[i].y, t);
+
+					attributes.displacement.value[i] = getValue(z)
+					attributes.noise.value[i] = Math.random()
+
 					// mesh.geometry.vertices[i].z = z
 					
 					var col = negCol
@@ -179,7 +311,7 @@
 				return function(x, y, t){
 					var dist = Math.sqrt(Math.pow(x0 - x, 2) + Math.pow(y0 - y, 2))
 					// return Math.sin(2 * Math.PI * freq * (t + dist)) / Math.max(Math.pow(dist, 1/3), 0.075)
-					return mag * Math.sin(2 * Math.PI * freq * (t + dist)) / Math.max(Math.log(dist + 1), 0.1)
+					return mag * Math.sin(2 * Math.PI * freq * (t + dist)) / Math.max(Math.log(dist * 2 + 1), 0.2)
 				}
 			}
 
@@ -208,12 +340,27 @@
 
 				// var time = Date.now() * 0.001;
 				t += 0.025
-				var mag = 3;
+				var mag = 1;
+
+				var max = -1.0e30;
+				var min = +1.0e30;
+				var x = 0;
+
+
+
+				attributes.displacement.needsUpdate = true;
+
 
 				for(var i = 0; i < mesh.geometry.vertices.length; i++){
 					var z = 0;
 					for(var j = 0; j < equations.length; j++)
 						z+=equations[j](mesh.geometry.vertices[i].x, mesh.geometry.vertices[i].y, t);
+
+
+					x = attributes.displacement.value[i] = getValue(z);
+					attributes.noise.value[i] = Math.random();
+					if (x < min) min = x;
+					if (x > max) max = x;
 
 					if(i == 0 && t % 1 == 0)
 						console.log(z)
@@ -236,7 +383,12 @@
 
 				}
 
-				mainGroup.rotateZ(0.005)
+
+				uniforms.lowest.value = min;
+				uniforms.highest.value = max;
+				uniforms.span.value = max - min;
+
+				// mainGroup.rotateZ(0.005)
 
 				// mesh.rotation.x = time * 0.25;
 				// mesh.rotation.y = time * 0.5;
