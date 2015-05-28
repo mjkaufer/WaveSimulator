@@ -182,13 +182,8 @@
 			var WaveControl = function(i){
 				this.frequency = freq;
 
-				if(i < 2){
-					this.x = 10 * (i == 0 ? -1 : 1)
-					this.y = 0;
-				} else {
-					this.x = Math.random() * 20 - 10
-					this.y = Math.random() * 20 - 10
-				}
+					this.x = (i < 2 ? 1 : 0) * 10 * (i == 0 ? -1 : 1)
+					this.y = (i >= 2 ? 1 : 0) * 10 * (i == 2 ? -1 : 1);
 				
 				this.magnitude = 0.5;
 				this.enabled = (i < 2)
@@ -217,8 +212,7 @@
 				for(var i = 0; i < generatorCount; i++){
 					var t = generators.addFolder("Generator " + (i + 1))
 					generatorControls[i] = new WaveControl(i)
-					console.log(generatorControls)
-					addAutoUpdate(t.add(generatorControls[i], 'frequency'), i)
+					addAutoUpdate(t.add(generatorControls[i], 'frequency', -5, 5), i)
 					addAutoUpdate(t.add(generatorControls[i], 'x', -20, 20), i)
 					addAutoUpdate(t.add(generatorControls[i], 'y', -20, 20), i)
 					addAutoUpdate(t.add(generatorControls[i], 'magnitude', -5, 5), i)
@@ -455,8 +449,6 @@
 					if (x < min) min = x;
 					if (x > max) max = x;
 
-					if(i == 0 && t % 1 == 0)
-						console.log(z)
 					
 					mesh.geometry.vertices[i].z = z * mag
 					
